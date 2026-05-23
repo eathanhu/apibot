@@ -208,6 +208,11 @@ def extract_code_blocks(text: str) -> list[tuple[str, str]]:
 # ─── AI API Call ─────────────────────────────────────────────────────────────
 
 
+def clean_ai_response(text: str) -> str:
+    text = re.sub(r'<system-reminder>.*?</system-reminder>', '', text, flags=re.DOTALL)
+    text = re.sub(r'</?system-reminder[^>]*>', '', text)
+    return text.strip()
+
 async def call_ai(messages: list[dict], model_key: str) -> str:
     model_info = MODELS.get(model_key, MODELS[DEFAULT_MODEL])
     headers = {
@@ -233,7 +238,7 @@ async def call_ai(messages: list[dict], model_key: str) -> str:
                 resp = await client.post(PIONEER_API_URL, json=payload, headers=headers)
                 if resp.status_code == 200:
                     data = resp.json()
-                    return data["choices"][0]["message"]["content"].strip()
+                    return clean_ai_response(data["choices"][0]["message"]["content"])
                 elif resp.status_code in (403, 429, 500, 502, 503):
                     logger.warning(f"AI API error {resp.status_code}, attempt {attempt + 1}/3")
                     if attempt < 2:
